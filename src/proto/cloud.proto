@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package cloud;
+
+service FileService {
+  rpc download (DownloadRequest) returns (DownloadResponse);
+  rpc save (SaveRequest) returns (SaveResponse);
+}
+
+message DownloadRequest {
+  string location = 1;
+  string file_name = 2;
+}
+
+message DownloadResponse {
+  string bytes = 1;
+}
+
+message SaveRequest {
+  string bytes = 1;
+  string file_name = 2;
+}
+
+message SaveResponse {
+  uint32 status = 1;
+  string message = 2;
+}
