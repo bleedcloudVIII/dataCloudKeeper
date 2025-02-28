@@ -17,12 +17,31 @@ export async function download(call: grpc.ServerUnaryCall<DownloadRequest, Downl
     callback(null, { bytes: `${content}` });
 }
 
-export async function save(call: grpc.ServerUnaryCall<SaveRequest, SaveResponse>, callback: grpc.sendUnaryData<SaveResponse>) {
-    const file_name = call.request.file_name;
-    const bytes = call.request.bytes;
+// TODO затирать данные в файле в начале записи??
+export function save(call, callback) {
+    // const file_name = call.request.file_name;
+    const file_name = call.metadata.get('file_name');
+    // const bytes = call.request.bytes;
     const filePath = path.resolve(__dirname, `./../files/${file_name}`);
 
-    await writeFile(filePath, bytes);
+    const writer = Bun.file(filePath);//.writer();
+
+    call.on('data', (chunk: {bytes: string}) => {
+        console.log(chunk.bytes);
+        //Bun.write(filePath, chunk.bytes, {mode: 'append'});
+        writer.write(chunk.bytes);
+    });
+
+    call.on('end', () => {
+        writer.end();
+        callback(null, {message: "OK", status: 0});
+    });
+
+    call.on('error', (err) => {
+        console.log(err);
+    });
+
+    // await writeFile(filePath, bytes);
     
-    callback(null, {message: "OK", status: 0});
+    // callback(null, {message: "OK", status: 0});
 }
