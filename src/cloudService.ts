@@ -8,23 +8,27 @@ import * as path from 'path';
 
 // TODO обработку ошибок, чтобы не крашилось
 
+function getFilePath(metadata: grpc.Metadata) {
+    const file_name = metadata.get('file_name');
+    const location = metadata.get('location');
+
+    return path.resolve(__dirname, `./../files/${location}/${file_name}`);
+}
+
 export async function download(call: grpc.ServerUnaryCall<DownloadRequest, DownloadResponse>, callback: grpc.sendUnaryData<DownloadResponse>) {
     const file_name = call.request.file_name;
     const location = call.request.location;
-    const filePath = path.resolve(__dirname, `./../files/${file_name}`);
+    const file_path = path.resolve(__dirname, `./../files/${file_name}`);
 
-    const content = await readFile(filePath)
+    const content = await readFile(file_path)
     callback(null, { bytes: `${content}` });
 }
 
 // TODO затирать данные в файле в начале записи??
 export function save(call, callback) {
-    // const file_name = call.request.file_name;
-    const file_name = call.metadata.get('file_name');
-    // const bytes = call.request.bytes;
-    const filePath = path.resolve(__dirname, `./../files/${file_name}`);
+    const file_path = getFilePath(call.metadata)
 
-    const writer = Bun.file(filePath);//.writer();
+    const writer = Bun.file(file_path).writer();
 
     call.on('data', (chunk: {bytes: string}) => {
         console.log(chunk.bytes);
