@@ -5,20 +5,26 @@ import type { SaveRequest } from './proto/interface/saveRequest';
 import type { SaveResponse } from './proto/interface/saveResponse';
 import { readFile, writeFile } from "fs/promises";
 import * as path from 'path';
+import * as fs from 'fs';
 
 // TODO обработку ошибок, чтобы не крашилось
 
-function getFilePath(metadata: grpc.Metadata) {
+function get_file_path(metadata: grpc.Metadata) {
     const file_name = metadata.get('file_name');
     const location = metadata.get('location');
 
-    return path.resolve(__dirname, `./../files/${location}/${file_name}`);
+    const file_path = path.resolve(__dirname, `./../files/${location}/${file_name}`);
+    console.log(file_path);
+    fs.mkdirSync(file_path);
+
+    return file_path;
 }
 
 export async function download(call: grpc.ServerUnaryCall<DownloadRequest, DownloadResponse>, callback: grpc.sendUnaryData<DownloadResponse>) {
     const file_name = call.request.file_name;
     const location = call.request.location;
     const file_path = path.resolve(__dirname, `./../files/${file_name}`);
+    
 
     const content = await readFile(file_path)
     callback(null, { bytes: `${content}` });
@@ -26,7 +32,7 @@ export async function download(call: grpc.ServerUnaryCall<DownloadRequest, Downl
 
 // TODO затирать данные в файле в начале записи??
 export function save(call, callback) {
-    const file_path = getFilePath(call.metadata)
+    const file_path = get_file_path(call.metadata)
 
     const writer = Bun.file(file_path).writer();
 
