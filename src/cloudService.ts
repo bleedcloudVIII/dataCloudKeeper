@@ -27,17 +27,20 @@ export function download(call, callback) {
         return;
     }
 
-    const file = Bun.file(file_path);
-    const file_stream = file.stream();
-    const reader = file_stream.getReader();
+    const file_stream = fs.createReadStream(file_path);
 
-    reader.read().then(function processChunk({ done, value }) {
-        if (done) {
+    file_stream.on('data', (chunk) => {
+        console.log(chunk);
+        call.write({bytes: chunk});
+    });
+
+    file_stream.on('end', () => {
         call.end();
-        return;
-        }
-        call.write({ bytes: value });
-        reader.read().then(processChunk);
+    });
+
+    file_stream.on('error', (err) => {
+       console.log(err);
+       call.write({bytes: 0, message: err});
     });
 }
 
