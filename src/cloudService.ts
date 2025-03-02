@@ -11,9 +11,7 @@ function get_file_path(location: string, file_name: string): string {
             fs.mkdirSync(location_dir_path, {recursive: true});
         }
     
-        const file_path = `${DIR_PATH}${location}/${file_name}`;
-    
-        return file_path;
+        return `${DIR_PATH}${location}/${file_name}`;
     }
     return '';
 }
