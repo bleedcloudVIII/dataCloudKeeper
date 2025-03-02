@@ -1,57 +1,70 @@
-import * as grpc from '@grpc/grpc-js';
-import type { DownloadRequest } from './proto/interface/downloadRequest';
-import type { DownloadResponse } from './proto/interface/downloadResponse';
-import type { SaveRequest } from './proto/interface/saveRequest';
-import type { SaveResponse } from './proto/interface/saveResponse';
-import { readFile, writeFile } from "fs/promises";
-import * as path from 'path';
 import * as fs from 'fs';
 
-// TODO обработку ошибок, чтобы не крашилось
+const DIR_PATH = 'C:/dataCloud/files/';
 
-function get_file_path(metadata: grpc.Metadata) {
-    const file_name = metadata.get('file_name');
-    const location = metadata.get('location');
+function get_file_path(location: string, file_name: string): string {
+    const location_dir_path = `${DIR_PATH}${location}`;
 
-    const file_path = path.resolve(__dirname, `./../files/${location}/${file_name}`);
-    console.log(file_path);
-    fs.mkdirSync(file_path);
-
-    return file_path;
-}
-
-export async function download(call: grpc.ServerUnaryCall<DownloadRequest, DownloadResponse>, callback: grpc.sendUnaryData<DownloadResponse>) {
-    const file_name = call.request.file_name;
-    const location = call.request.location;
-    const file_path = path.resolve(__dirname, `./../files/${file_name}`);
+    if (location && file_name)
+    {
+        if (!fs.existsSync(location_dir_path)){
+            fs.mkdirSync(location_dir_path, {recursive: true});
+        }
     
-
-    const content = await readFile(file_path)
-    callback(null, { bytes: `${content}` });
+        const file_path = `${DIR_PATH}${location}/${file_name}`;
+    
+        return file_path;
+    }
+    return '';
 }
 
-// TODO затирать данные в файле в начале записи??
+// @ts-ignore
+export function download(call, callback) {
+    const file_path = get_file_path(call.request.location, call.request.file_name);
+
+    if (file_path == '')
+    {
+        call.write({bytes: 0, message: 'error'});
+        call.end();
+        return;
+    }
+
+    const file = Bun.file(file_path);
+    const file_stream = file.stream();
+    const reader = file_stream.getReader();
+
+    reader.read().then(function processChunk({ done, value }) {
+        if (done) {
+        call.end();
+        return;
+        }
+        call.write({ bytes: value });
+        reader.read().then(processChunk);
+    });
+}
+
+// @ts-ignore
 export function save(call, callback) {
-    const file_path = get_file_path(call.metadata)
+    const file_path = get_file_path(call.metadata.get('location')[0], call.metadata.get('file_name')[0]);
 
-    const writer = Bun.file(file_path).writer();
+    if (file_path == '') return callback(null, {message: 'empty metadata', status: 2});
 
-    call.on('data', (chunk: {bytes: string}) => {
-        console.log(chunk.bytes);
-        //Bun.write(filePath, chunk.bytes, {mode: 'append'});
-        writer.write(chunk.bytes);
+    if (fs.existsSync(file_path)){
+        fs.writeFileSync(file_path, '');
+    }
+
+    const write_stream = fs.createWriteStream(file_path);
+
+    call.on('data', (chunk: {bytes: any}) => {
+        write_stream.write(chunk.bytes)
     });
 
     call.on('end', () => {
-        writer.end();
+        write_stream.end();
         callback(null, {message: "OK", status: 0});
     });
 
     call.on('error', (err) => {
-        console.log(err);
+        callback(null, {message: err.message, status: 1});
     });
-
-    // await writeFile(filePath, bytes);
-    
-    // callback(null, {message: "OK", status: 0});
 }

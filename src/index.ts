@@ -14,17 +14,13 @@ const proto_loader_options: protoLoader.Options = {
     oneofs: true,
 }
 
-const server_options: grpc.ServerOptions = {
-    "grpc.max_receive_message_length": 1024 * 1024 * 100,
-    "grpc.max_send_message_length": 1024 * 1024 * 100,
-}
-
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, proto_loader_options);
 
 const CloudProto = grpc.loadPackageDefinition(packageDefinition).cloud;
 
 function main() {
-    const server = new grpc.Server(server_options);
+    const server = new grpc.Server();
+    // @ts-ignore
     server.addService((CloudProto.FileService as any).service, {
         download,
         save
