@@ -27,20 +27,17 @@ export function download(call, callback) {
         return;
     }
 
-    const file_stream = fs.createReadStream(file_path);
+    const file = Bun.file(file_path);
+    const file_stream = file.stream();
+    const reader = file_stream.getReader();
 
-    file_stream.on('data', (chunk) => {
-        console.log(chunk);
-        call.write({bytes: chunk});
-    });
-
-    file_stream.on('end', () => {
+    reader.read().then(function processChunk({ done, value }) {
+        if (done) {
         call.end();
-    });
-
-    file_stream.on('error', (err) => {
-       console.log(err);
-       call.write({bytes: 0, message: err});
+        return;
+        }
+        call.write({ bytes: value });
+        reader.read().then(processChunk);
     });
 }
 
@@ -50,22 +47,17 @@ export function save(call, callback) {
 
     if (file_path == '') return callback(null, {message: 'empty metadata', status: 2});
 
-    if (fs.existsSync(file_path)){
-        fs.writeFileSync(file_path, '');
-    }
+    const writer = Bun.file(file_path);
 
-    const write_stream = fs.createWriteStream(file_path);
-
-    call.on('data', (chunk: {bytes: any}) => {
-        write_stream.write(chunk.bytes)
+    call.on('data', (chunk: { bytes: any }) => {
+        writer.write(chunk.bytes);
     });
 
     call.on('end', () => {
-        write_stream.end();
-        callback(null, {message: "OK", status: 0});
+        callback(null, { message: "OK", status: 0 });
     });
 
     call.on('error', (err) => {
-        callback(null, {message: err.message, status: 1});
+        callback(null, { message: err.message, status: 1 });
     });
 }
