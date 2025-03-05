@@ -16,7 +16,7 @@ const proto_loader_options: protoLoader.Options = {
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, proto_loader_options);
 
-const CloudProto = grpc.loadPackageDefinition(packageDefinition).cloud;
+const CloudProto = grpc.loadPackageDefinition(packageDefinition).keeper;
 
 function main() {
     const server = new grpc.Server();
