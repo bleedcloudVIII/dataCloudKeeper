@@ -50,6 +50,7 @@ export function save(call, callback) {
     const writer = Bun.file(file_path).writer();
     
     call.on('data', (chunk: { bytes: any }) => {
+        console.log(chunk.bytes);
         writer.write(chunk.bytes);
     });
 
