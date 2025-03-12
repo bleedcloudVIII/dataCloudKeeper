@@ -47,9 +47,10 @@ export function save(call, callback) {
 
     if (file_path == '') return callback(null, {message: 'empty metadata', status: 2});
 
-    const writer = Bun.file(file_path);
-
+    const writer = Bun.file(file_path).writer();
+    let i = 0;
     call.on('data', (chunk: { bytes: any }) => {
+        console.log(chunk.bytes);
         writer.write(chunk.bytes);
     });
 
@@ -58,6 +59,7 @@ export function save(call, callback) {
     });
 
     call.on('error', (err) => {
+        writer.end();
         callback(null, { message: err.message, status: 1 });
     });
 }
