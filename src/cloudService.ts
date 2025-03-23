@@ -33,8 +33,8 @@ export function download(call, callback) {
 
     reader.read().then(function processChunk({ done, value }) {
         if (done) {
-        call.end();
-        return;
+            call.end();
+            return;
         }
         call.write({ bytes: value });
         reader.read().then(processChunk);
@@ -50,7 +50,6 @@ export function save(call, callback) {
     const writer = Bun.file(file_path).writer();
     
     call.on('data', (chunk: { bytes: any }) => {
-        console.log(chunk.bytes);
         writer.write(chunk.bytes);
     });
 
